@@ -2,7 +2,6 @@ use arrayfire::*;
 use num::complex::*;
 use computer::*;
 mod gates;
-pub mod registers;
 mod computer;
 
 /*
@@ -28,24 +27,18 @@ impl Qubit {
 
 fn main() {
     set_backend(Backend::CUDA);
-    /*println!("There are {:?} available backends", get_backend_count());
-    let available = get_available_backends();
-    if available.contains(&Backend::CPU) {
-        println!("Evaluating CPU Backend...");
-        set_backend(Backend::CPU);
-        println!("There are {} CPU compute devices", device_count());
-    }
-    if available.contains(&Backend::CUDA ) {
-        println!("Evaluating CUDA Backend...");
-        set_backend(Backend::CUDA);
-        println!("There are {} CUDA compute devices", device_count());
-    }
-    if available.contains(&Backend::OPENCL) {
-        println!("Evaluating OpenCL Backend...");
-        set_backend(Backend::OPENCL);
-        println!("There are {} OpenCL compute devices", device_count());
-    }*/
+
+    //let mut states:&[&[c32]] = &[
+    //    &[complex(0.3,0.2),complex(0.5,0.4)],
+    //    &[complex(0.9,0.0),complex(0.05,0.0)]];
+
+    let mut qcompu = QCsim::new();
+    //qcompu.init(states);
+
+    qcompu.addzero();
 
 
+
+    qcompu.print_state_vector();
 
 }
