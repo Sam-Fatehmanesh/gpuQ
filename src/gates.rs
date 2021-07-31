@@ -1,7 +1,6 @@
 use arrayfire::*;
 use num::complex::Complex32;
 use crate::computer::complex;
-use std::intrinsics::sqrtf32;
 
 pub struct GateGenerator {
     pub hadamard: Array<Complex32>,
@@ -10,8 +9,9 @@ pub struct GateGenerator {
 }
 impl GateGenerator {
     pub fn new() -> GateGenerator{
-        let mut H: Array<c32> = identity(dim4!(2,2)) * complex(1/(2.0f32.sqrt()),0.0);
-
+        let two: f32 = 2.0;
+        let identity_m: Array<c32> = identity(dim4!(2,2));
+        let H: Array<c32> = identity_m * complex(1.0/two.sqrt(), 0.0);
         GateGenerator{
             hadamard: H,
             identity: identity(dim4!(2,2))

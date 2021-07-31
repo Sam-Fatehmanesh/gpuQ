@@ -63,7 +63,7 @@ impl QCsim {
         }
         let mut qubit_state = Array::new(&[state_zero,state_one],dim4!(2));
         qubit_state = normalize_q(&qubit_state);
-        self.q_tensor = vectormul(&self.q_tensor, &qubit_state);
+        self.q_tensor = vector_fat_mul(&self.q_tensor, &qubit_state);
         self.qubit_count += 1;
         self.state_count = self.state_count * 2;
     }
@@ -75,7 +75,7 @@ impl QCsim {
             return;
         }
         let qubit_state = normalize_q(&states);
-        self.q_tensor = vectormul(&self.q_tensor, &qubit_state);
+        self.q_tensor = vector_fat_mul(&self.q_tensor, &qubit_state);
         self.qubit_count += 1;
         self.state_count = self.state_count * 2;
     }
@@ -86,7 +86,12 @@ impl QCsim {
     }
 
     // apply a one qubit
-    pub fn apply_single_gate(&mut self, index: i32, gate: Array<c32>) {
+    pub fn apply_single_gate(&mut self, index: &[i32], gate: Array<c32>) {
+        if index.len() < 1 {
+
+            return;
+        }
+
 
     }
 
@@ -112,7 +117,7 @@ pub fn reciprocal(base: &Array<f32>) -> Array<f32>{
 }
 
 // multiplies two vectors together in this manner [x1,x2] * [y1,y2] = [x1y1, x1y2, x2y1, x2y2]
-pub fn vectormul(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
+pub fn vector_fat_mul(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
     // creates a matrix of 0s to combine with the r vector
     let size_zeros = constant(complex(0.0,0.0),dim4!(r.dims().get()[0],l.dims().get()[0]-1));
     // creates the matrix factor which is formed from joining the 0s with the r vector
@@ -121,7 +126,7 @@ pub fn vectormul(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
     // begins the shiftadd matrix which is a shifted form of the initial matrix_factor
     let mut shiftadd: Array<c32> = shift(&matrix_factor,&[0,1,0,0]);
 
-    // loops while adding progressivly shifted shiftadd to the matrix factor
+    // loops while adding progressively shifted shiftadd matrices to the matrix factor
     for i in 1..(l.dims().get()[0]) {
         matrix_factor = join(0,&matrix_factor,&shiftadd);
         shiftadd = shift(&shiftadd,&[0,1,0,0]);
@@ -129,6 +134,47 @@ pub fn vectormul(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
 
     //multiplies matrix add by l vector to get the output vector
     matmul(&matrix_factor, &l, MatProp::NONE, MatProp::NONE)
+}
+
+// multiplies two 2x2 matrices together in this manner [[x,y],[w,z]]*[[a,b],[c,d]]=[[xa,xb,ya,yb],[xc,xd,yc,yd],[wa,wb,za,zb],[wc,wd,zc,zd]]
+pub fn matrix2x2_fat_mul(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
+    // generates the required matrix to format and prepare
+    let mut format_matrix = constant(complex(0.0,0.0),dim4!(4,2));
+    let one = constant(complex(1.0,0.0),dim4!(1));
+    eval!(format_matrix[0:0:1,0:0:1] = one);
+    eval!(format_matrix[2:2:1,1:1:1] = one);
+
+    // formats the factor matrices by multiplying them by
+    let mut factor_matrix_l = matmul(&format_matrix, l, MatProp::NONE, MatProp::NONE);
+    let mut factor_matrix_r = matmul(&format_matrix, r, MatProp::NONE, MatProp::NONE);
+
+    // adds a shifted version of the factor matrix to itself
+    factor_matrix_l = join(1, &factor_matrix_l, &shift(&factor_matrix_l, &[1, 0, 0, 0]));
+    factor_matrix_r = join(1, &factor_matrix_r, &shift(&factor_matrix_r, &[1, 0, 0, 0]));
+
+    // returns the matrix multiplication product from the multiplication of factor_matrix_l and factor_matrix_r
+    matmul(&factor_matrix_l, &factor_matrix_r, MatProp::NONE, MatProp::NONE)
+}
+
+// multiplies two 2x2 matrices together in this manner [[x,y],[w,z]]*[[a,b],[c,d]]=[[xa,xb,ya,yb],[xc,xd,yc,yd],[wa,wb,za,zb],[wc,wd,zc,zd]]
+pub fn matrix_fat_mul(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
+    // generates the required matrix to format and prepare
+    let mut format_matrix = constant(complex(0.0,0.0),dim4!(4,2));
+    let one = constant(complex(1.0,0.0),dim4!(1));
+    eval!(format_matrix[0:0:1,0:0:1] = one);
+    
+    eval!(format_matrix[2:2:1,1:1:1] = one);
+
+    // formats the factor matrices by multiplying them by
+    let mut factor_matrix_l = matmul(&format_matrix, l, MatProp::NONE, MatProp::NONE);
+    let mut factor_matrix_r = matmul(&format_matrix, r, MatProp::NONE, MatProp::NONE);
+
+    // adds a shifted version of the factor matrix to itself
+    factor_matrix_l = join(1, &factor_matrix_l, &shift(&factor_matrix_l, &[1, 0, 0, 0]));
+    factor_matrix_r = join(1, &factor_matrix_r, &shift(&factor_matrix_r, &[1, 0, 0, 0]));
+
+    // returns the matrix multiplication product from the multiplication of factor_matrix_l and factor_matrix_r
+    matmul(&factor_matrix_l, &factor_matrix_r, MatProp::NONE, MatProp::NONE)
 }
 
 // normalizes complex vectors such as quantum state vectors
