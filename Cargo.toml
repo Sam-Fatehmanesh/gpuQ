@@ -8,4 +8,4 @@ edition = "2018"
 
 [dependencies]
 arrayfire = "3.8.0"
-num = "*"
+may = "0.3.19"

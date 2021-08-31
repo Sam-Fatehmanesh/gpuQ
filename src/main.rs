@@ -1,62 +1,32 @@
 use arrayfire::*;
-use num::complex::*;
 use computer::*;
 mod gates;
 mod computer;
 
-/*
-struct Qubit {
-    vector: Array<c32>,
-}
-impl Qubit {
-    fn base() -> Qubit {
-        let initarr :[c32; 2] = [Complex::new(1.0, 0.0),Complex::new(0.0, 0.0)];
-        let dims = Dim4::new(&[2, 1, 1, 1]);
-
-        return Qubit {vector: Array::new(&initarr,dims)};
-    }
-    fn new(vector: [c32; 2]) -> Qubit {
-        let dims = Dim4::new(&[2, 1, 1, 1]);
-
-        return Qubit {vector: Array::new(&vector,dims)};
-    }
-    fn print(self) {
-        af_print!("qubit vector: ", self.vector);
-    }
-}*/
 
 fn main() {
-    set_backend(Backend::CUDA);
+    arrayfire::info();
+    set_backend(Backend::CPU);
 
-    let mut states:&[&[c32]] = &[
-        &[complex(1.0,0.0),complex(0.0,0.0)],
-        &[complex(0.0,0.0),complex(1.0,0.0)]];
+    let arr0: Array<c32> = flat(&identity(dim4!(3,3)));
+    let arr1: Array<c32> = flat(&identity(dim4!(2,2)));
 
-    let mut states2:&[&[c32]] = &[
-        &[complex(1.0,0.0),complex(0.0,0.0)],
-        &[complex(0.0,0.0),complex(1.0,0.0)]];
+    let out = vector_outer_product(&arr0,&arr1);//vector_outer_product(&init_values, &init_values2);
+
+    //let out = matrix2x2_fat_mul(&init_values, &init_values2);
+
+    print(&out);
+
     /*
-    let mut init_values: Array<c32> = Array::new(&states[0], dim4!(2));
-    let mut init_values2: Array<c32> = Array::new(&states2[0], dim4!(2));
+    let arr1 = constant(complex(2.0,0.0),dim4!(2));
 
-    for i in 1..states.len() {
-        init_values = join(1, &init_values, &Array::new(&states[i], dim4!(2)));
-        init_values2 = join(1, &init_values2, &Array::new(&states2[i], dim4!(2)));
-    }
-    print(&init_values);
-    print(&init_values2);
-    let out = matrix2x2_fat_mul(&init_values,&init_values2);
+    let arr2 = constant(complex(2.0,0.0),dim4!(2));
+
+    let out = vector_outer_mul2(&arr1, &arr2);
     print(&out);*/
 
-    //let mut qcompu = QCsim::new();
-    //qcompu.init(states);
+    //let mut test:Array<f32> = range(dim4!(5),0);
+    //test = tile(&test, dim4!(2));
 
-    //qcompu.addzero();
-
-
-
-    //qcompu.print_state_vector();
-
-
-
+    //print(&test);
 }

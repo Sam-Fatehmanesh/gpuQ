@@ -1,9 +1,4 @@
-use core::num::*;
-use std::ptr::null;
 use arrayfire::*;
-use core::num::*;
-use num::Complex;
-use std::vec::Vec;
 
 pub struct QCsim {
     q_tensor: Array<c32>,
@@ -63,7 +58,7 @@ impl QCsim {
         }
         let mut qubit_state = Array::new(&[state_zero,state_one],dim4!(2));
         qubit_state = normalize_q(&qubit_state);
-        self.q_tensor = vector_fat_mul(&self.q_tensor, &qubit_state);
+        self.q_tensor = vector_outer_product(&self.q_tensor, &qubit_state);
         self.qubit_count += 1;
         self.state_count = self.state_count * 2;
     }
@@ -75,7 +70,7 @@ impl QCsim {
             return;
         }
         let qubit_state = normalize_q(&states);
-        self.q_tensor = vector_fat_mul(&self.q_tensor, &qubit_state);
+        self.q_tensor = vector_outer_product(&self.q_tensor, &qubit_state);
         self.qubit_count += 1;
         self.state_count = self.state_count * 2;
     }
@@ -91,8 +86,6 @@ impl QCsim {
 
             return;
         }
-
-
     }
 
     // prints the quantum state vector
@@ -103,11 +96,11 @@ impl QCsim {
 
 // returns a complex number of type c32
 pub fn complex(re: f32, im: f32) -> c32 {
-    Complex::new(re,im)
+    c32::new(re,im)
 }
 
 // changes each value of the tensor to the value equal to 2 ^ the prior value
-pub fn twoEx(ex: &Array<f32>) -> Array<f32>{
+pub fn two_ex(ex: &Array<f32>) -> Array<f32>{
     arrayfire::pow(&2,ex,true)
 }
 
@@ -117,23 +110,23 @@ pub fn reciprocal(base: &Array<f32>) -> Array<f32>{
 }
 
 // multiplies two vectors together in this manner [x1,x2] * [y1,y2] = [x1y1, x1y2, x2y1, x2y2]
-pub fn vector_fat_mul(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
-    // creates a matrix of 0s to combine with the r vector
-    let size_zeros = constant(complex(0.0,0.0),dim4!(r.dims().get()[0],l.dims().get()[0]-1));
-    // creates the matrix factor which is formed from joining the 0s with the r vector
-    let mut matrix_factor = join(1,&r,&size_zeros);
+pub fn vector_outer_product(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
+    flat(&matmul(l, &transpose(r,false), MatProp::NONE, MatProp::NONE))
+    /*
+    // stores the length of the vectors
+    let lsize = l.dims().get()[0];
+    let rsize = r.dims().get()[0];
 
-    // begins the shiftadd matrix which is a shifted form of the initial matrix_factor
-    let mut shiftadd: Array<c32> = shift(&matrix_factor,&[0,1,0,0]);
+    // builds the right vector factor by tiling r for lsize times.
+    let rfactor = tile(r,Dim4::new(&[lsize,1,1,1]));
 
-    // loops while adding progressively shifted shiftadd matrices to the matrix factor
-    for i in 1..(l.dims().get()[0]) {
-        matrix_factor = join(0,&matrix_factor,&shiftadd);
-        shiftadd = shift(&shiftadd,&[0,1,0,0]);
-    }
+    // builds the left vector by tiling l by rsize times and then by sorting into a [a,a,a,b,b,b,c,c,c...] pattern
+    let key: Array<i32> = tile(&range(dim4!(lsize),0),dim4!(rsize));
+    let lfactor = sort_by_key(&key, &tile(l, dim4!(rsize)), 0, true).1;
+    print(&lfactor);
+    print(&rfactor);
 
-    //multiplies matrix add by l vector to get the output vector
-    matmul(&matrix_factor, &l, MatProp::NONE, MatProp::NONE)
+    lfactor * rfactor*/
 }
 
 // multiplies two 2x2 matrices together in this manner [[x,y],[w,z]]*[[a,b],[c,d]]=[[xa,xb,ya,yb],[xc,xd,yc,yd],[wa,wb,za,zb],[wc,wd,zc,zd]]
@@ -157,24 +150,30 @@ pub fn matrix2x2_fat_mul(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
 }
 
 // multiplies two 2x2 matrices together in this manner [[x,y],[w,z]]*[[a,b],[c,d]]=[[xa,xb,ya,yb],[xc,xd,yc,yd],[wa,wb,za,zb],[wc,wd,zc,zd]]
-pub fn matrix_fat_mul(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
-    // generates the required matrix to format and prepare
-    let mut format_matrix = constant(complex(0.0,0.0),dim4!(4,2));
-    let one = constant(complex(1.0,0.0),dim4!(1));
-    eval!(format_matrix[0:0:1,0:0:1] = one);
-    
-    eval!(format_matrix[2:2:1,1:1:1] = one);
+// {requires implementation of matrix mode which would mostly include use of moddims instead of flat}
+pub fn matrix_kron_product(l: &Array<c32>, r: &Array<c32>) -> Array<c32> {
+    // Dimensions of input tensors are stored and creates the final dim of the tensor product
+    let l_dims = l.dims();
+    let r_dims = r.dims();
+    let neo_dims = dim_mul(&l_dims,&r_dims);
 
-    // formats the factor matrices by multiplying them by
-    let mut factor_matrix_l = matmul(&format_matrix, l, MatProp::NONE, MatProp::NONE);
-    let mut factor_matrix_r = matmul(&format_matrix, r, MatProp::NONE, MatProp::NONE);
 
-    // adds a shifted version of the factor matrix to itself
-    factor_matrix_l = join(1, &factor_matrix_l, &shift(&factor_matrix_l, &[1, 0, 0, 0]));
-    factor_matrix_r = join(1, &factor_matrix_r, &shift(&factor_matrix_r, &[1, 0, 0, 0]));
+    // flattens matrices into vectors (should later be made compatible with )
+    let mut l_factor = flat(l);
+    let mut r_factor = flat(r);
+    // converts the resulting vector product back into a tensor of the product dims
 
-    // returns the matrix multiplication product from the multiplication of factor_matrix_l and factor_matrix_r
-    matmul(&factor_matrix_l, &factor_matrix_r, MatProp::NONE, MatProp::NONE)
+    moddims(&vector_outer_product(&l_factor, &r_factor), neo_dims)
+}
+
+// Multiplies dims by making each dimension the product of the previous two dimension size of the same dimension
+pub fn dim_mul(x: &Dim4, y: &Dim4) -> Dim4 {
+    let one = x.get()[0] * y.get()[0];
+    let two = x.get()[1] * y.get()[0];
+    let three = x.get()[2] * y.get()[2];
+    let four = x.get()[3] * y.get()[3];
+
+    dim4!(one,two,three,four)
 }
 
 // normalizes complex vectors such as quantum state vectors
@@ -193,5 +192,5 @@ pub fn normalize_q(state_vector: &Array<c32>) -> Array<c32> {
 
 // Returns the probability of each state of the quantum system
 pub fn probability(state_vector: &Array<c32>) -> Array<f32> {
-    twoEx(&abs(&state_vector.copy()))
+    two_ex(&abs(&state_vector.copy()))
 }
