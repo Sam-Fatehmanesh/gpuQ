@@ -1,3 +1,11 @@
-/target
-/.idea
-Cargo.lock
+/CMakeFiles
+CMakeCache.txt
+CPackConfig.cmake
+cmake_install.cmake
+CPackSourceConfig.cmake
+CTestTestfile.cmake
+DartConfiguration.tcl
+Makefile
+gpuQ
+/Testing
+/example
