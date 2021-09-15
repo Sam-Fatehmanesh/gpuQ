@@ -1,0 +1,24 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/agi/Documents/Technical/Code/quantum/Qsim/QComputer.hpp
+arrayfire.h
+-
+vector
+-
+gates.hpp
+/home/agi/Documents/Technical/Code/quantum/Qsim/gates.hpp
+iostream
+-
+
+/home/agi/Documents/Technical/Code/quantum/Qsim/gates.hpp
+
+/home/agi/Documents/Technical/Code/quantum/Qsim/main.cpp
+QComputer.hpp
+/home/agi/Documents/Technical/Code/quantum/Qsim/QComputer.hpp
+

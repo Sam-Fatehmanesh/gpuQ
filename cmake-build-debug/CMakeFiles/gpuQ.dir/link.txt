@@ -1,0 +1,1 @@
+/usr/bin/c++  -ltbb -std=c++20 -fopenmp -g CMakeFiles/gpuQ.dir/main.cpp.o -o gpuQ  /usr/lib/libafcpu.so.3.8.0 
